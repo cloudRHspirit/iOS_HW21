@@ -1,11 +1,10 @@
-// EmojiDictionary
-
 import UIKit
 
 private let reuseIdentifier = "Item"
 
 class EmojiCollectionViewController: UICollectionViewController {
-
+    
+    //MARK: - Variables
     var emojis: [Emoji] = [
         Emoji(symbol: "😀", name: "Grinning Face", description: "A typical smiley face.", usage: "happiness"),
         Emoji(symbol: "😕", name: "Confused Face", description: "A confused, puzzled face.", usage: "unsure what to think; displeasure"),
@@ -22,20 +21,28 @@ class EmojiCollectionViewController: UICollectionViewController {
         Emoji(symbol: "🏁", name: "Checkered Flag", description: "A black-and-white checkered flag.", usage: "completion")
     ]
 
+    //MARK: - Life Cycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        let item = NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .fractionalHeight(1)
+            )
+        )
+        let group = NSCollectionLayoutGroup.horizontal(layoutSize: NSCollectionLayoutSize( widthDimension: .fractionalWidth(1), heightDimension: .absolute(70)
+            ), subitem: item, count: 1
+        )
+        let section = NSCollectionLayoutSection(group: group)
+        
+        collectionView.collectionViewLayout = UICollectionViewCompositionalLayout(section: section)
     }
     
     override func viewWillAppear(_ animated: Bool) {
         collectionView.reloadData()
     }
 
-    // MARK: UICollectionViewDataSource
-
+    // MARK: - UICollectionViewDataSource
     override func numberOfSections(in collectionView: UICollectionView) -> Int {
         return 1
     }
-
 
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         if section == 0 {
@@ -47,24 +54,18 @@ class EmojiCollectionViewController: UICollectionViewController {
 
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: reuseIdentifier, for: indexPath) as! EmojiCollectionViewCell
-    
-        //Step 2: Fetch model object to display
         let emoji = emojis[indexPath.item]
-
-        //Step 3: Configure cell
+        
         cell.update(with: emoji)
-
-        //Step 4: Return cell
         return cell
     }
 
+    //MARK: - Actions
     @IBSegueAction func addEditEmoji(_ coder: NSCoder, sender: Any?) -> AddEditEmojiTableViewController? {
         if let cell = sender as? UICollectionViewCell, let indexPath = collectionView.indexPath(for: cell) {
-            // Editing Emoji
             let emojiToEdit = emojis[indexPath.row]
             return AddEditEmojiTableViewController(coder: coder, emoji: emojiToEdit)
         } else {
-            // Adding Emoji
             return AddEditEmojiTableViewController(coder: coder, emoji: nil)
         }
     }
@@ -74,7 +75,30 @@ class EmojiCollectionViewController: UICollectionViewController {
             let sourceViewController = segue.source as? AddEditEmojiTableViewController,
             let emoji = sourceViewController.emoji else { return }
         
-        // Update the data source and collection view
+        if let path = collectionView.indexPathsForSelectedItems?.first {
+            emojis[path.row] = emoji
+            collectionView.reloadItems(at: [path])
+        } else {
+            let newIndexPath = IndexPath(row: emojis.count, section: 0)
+            emojis.append(emoji)
+            collectionView.insertItems(at: [newIndexPath])
+        }
     }
-
+    
+    //MARK: - CollectionView Methods
+    override func collectionView(_ collectionView: UICollectionView,
+       contextMenuConfigurationForItemAt indexPath: IndexPath,
+       point: CGPoint) -> UIContextMenuConfiguration? {
+        let config = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { (elements) -> UIMenu? in let delete = UIAction(title: "Delete") { (action) in self.deleteEmoji(at: indexPath)
+            }
+            return UIMenu(title: "", image: nil, identifier: nil, options: [], children: [delete])
+        }
+        return config
+    }
+    
+    //MARK: - Methods
+    func deleteEmoji(at indexPath: IndexPath) {
+        emojis.remove(at: indexPath.row)
+        collectionView.deleteItems(at: [indexPath])
+    }
 }
